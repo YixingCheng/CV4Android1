@@ -65,6 +65,7 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
     private Mat                    mRgba;
     private Mat                    mIntermediateMat;
     private Mat                    mGray;
+    private int                    histSizeNum = 25;
     
     private cvCameraPreview        cvPreviewInst1;
 	//private CameraBridgeViewBase cvCameraPreview;
@@ -346,18 +347,32 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 		Mat localRGBA = inputFrame.rgba();
 		org.opencv.core.Size sizeRGBA = localRGBA.size();
 		
+		int rows = (int) sizeRGBA.height;
+		int cols = (int) sizeRGBA.width;
+		
+		int leftMargin = cols / 8;
+		int topMargin = rows / 8;
+		
+		int innerWindowHeight = rows * 3 / 4;
+		int innerWindowWidth = rows * 3 / 4;
+		
 		final int viewMode = mViewMode;
 		
 		switch (viewMode) {
 		case VIEW_MODE_HIST:
-		    // input
+		    // overlay the histogram on the input frame
+			Mat hist = new Mat();
+			int thikness = (int) (sizeRGBA.width / (histSizeNum + 10) / 5);
+	        if(thikness > 5) thikness = 5;
+	        int offset = (int) ((sizeRGBA.width - (5*histSizeNum + 4*10)*thikness)/2);
+			
         case VIEW_MODE_GRAY:
             // input frame has gray scale format
             Imgproc.cvtColor(inputFrame.gray(), mRgba, Imgproc.COLOR_GRAY2RGBA, 4);
             break;
         case VIEW_MODE_RGBA:
             // input frame has RBGA format
-            mRgba = inputFrame.rgba();
+            // mRgba = inputFrame.rgba();
             break;
         case VIEW_MODE_CANNY:
             // input frame has gray scale format
