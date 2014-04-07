@@ -7,21 +7,24 @@ import java.util.List;
 import java.util.ListIterator;
 
 import org.opencv.android.BaseLoaderCallback;
-import org.opencv.android.CameraBridgeViewBase;
-import org.opencv.android.LoaderCallbackInterface;
-import org.opencv.android.OpenCVLoader;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
+import org.opencv.android.LoaderCallbackInterface;
+import org.opencv.android.OpenCVLoader;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
 
-
-
+import android.annotation.TargetApi;
+import android.app.Activity;
+import android.graphics.Point;
+import android.hardware.Camera;
+import android.hardware.Camera.Size;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.app.Activity;
 import android.util.Log;
+import android.view.Display;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -30,15 +33,7 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.View.OnTouchListener;
 import android.view.WindowManager;
-import android.support.v4.app.NavUtils;
-import android.annotation.TargetApi;
-import android.os.Build;
-import android.hardware.Camera;
-import android.hardware.Camera.Size;
-import android.widget.FrameLayout;
 import android.widget.Toast;
-import android.view.Display;
-import android.graphics.Point;
 
 public class CameraActivity extends Activity implements CvCameraViewListener2, OnTouchListener{
 	
@@ -49,15 +44,17 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 	public static int screen_width;
 	public static int screen_height;
 	
-	private static final int       VIEW_MODE_RGBA     = 0;
-    private static final int       VIEW_MODE_GRAY     = 1;
-    private static final int       VIEW_MODE_CANNY    = 2;
-    private static final int       VIEW_MODE_FEATURES = 5;
+	private static final int       VIEW_MODE_RGBA      = 0;
+    private static final int       VIEW_MODE_GRAY      = 1;
+    private static final int       VIEW_MODE_CANNY     = 2;
+    private static final int       VIEW_MODE_FEATURES  = 5;
+    private static final int       VIEW_MODE_HIST      = 6;
     
     private MenuItem               ItemPreviewRGBA;
     private MenuItem               ItemPreviewGray;
     private MenuItem               ItemPreviewCanny;
     private MenuItem               ItemPreviewFeatures;
+    private MenuItem               ItemPreviewHist;
     private List<Size>             mResolutionList;
     private MenuItem[]             mEffectMenuItems;
     private SubMenu                mColorEffectsMenu;
@@ -69,7 +66,7 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
     private Mat                    mIntermediateMat;
     private Mat                    mGray;
     
-    private cvCameraPreview      cvPreviewInst1;
+    private cvCameraPreview        cvPreviewInst1;
 	//private CameraBridgeViewBase cvCameraPreview;
     //private boolean              IsJavaCamera = true;
     //private MenuItem             ItemSwitchCamera = null;
@@ -234,6 +231,7 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
              //ItemSwitchCamera = menu.add("Toggle Native/Java camera");
              ItemPreviewRGBA = menu.add("Preview RGBA");
              ItemPreviewGray = menu.add("Preview GRAY");
+             ItemPreviewHist = menu.add("Preview Histogram");
              ItemPreviewCanny = menu.add("Canny");
              ItemPreviewFeatures = menu.add("Find features");
 		
@@ -270,7 +268,13 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
             	Toast toast = Toast.makeText(this, toastMesage, Toast.LENGTH_LONG);
                 toast.show();
                }
-            else if (item == ItemPreviewGray){
+             else if( item == ItemPreviewHist){
+            	mViewMode =  VIEW_MODE_HIST;
+            	toastMesage = "Histogram";
+            	Toast toast = Toast.makeText(this, toastMesage, Toast.LENGTH_LONG);
+            	toast.show();
+              }
+             else if (item == ItemPreviewGray){
             	mViewMode = VIEW_MODE_GRAY;
             	toastMesage = "GREY MODE";
             	Toast toast = Toast.makeText(this, toastMesage, Toast.LENGTH_LONG);
@@ -325,6 +329,7 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 		mRgba = new Mat(height, width, CvType.CV_8UC4);
         mIntermediateMat = new Mat(height, width, CvType.CV_8UC4);
         mGray = new Mat(height, width, CvType.CV_8UC1);
+        
 	}
 
 	@Override
@@ -338,8 +343,14 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 	@Override
 	public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
 		// TODO Auto-generated method stub
+		Mat localRGBA = inputFrame.rgba();
+		org.opencv.core.Size sizeRGBA = localRGBA.size();
+		
 		final int viewMode = mViewMode;
+		
 		switch (viewMode) {
+		case VIEW_MODE_HIST:
+		    // input
         case VIEW_MODE_GRAY:
             // input frame has gray scale format
             Imgproc.cvtColor(inputFrame.gray(), mRgba, Imgproc.COLOR_GRAY2RGBA, 4);
