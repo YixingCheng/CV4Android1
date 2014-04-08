@@ -2,6 +2,7 @@ package sc.vision.cv4android1;
 
 
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.ListIterator;
@@ -11,6 +12,7 @@ import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
@@ -48,7 +50,7 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
     private static final int       VIEW_MODE_GRAY      = 1;
     private static final int       VIEW_MODE_CANNY     = 2;
     private static final int       VIEW_MODE_FEATURES  = 5;
-    private static final int       VIEW_MODE_HIST      = 6;
+   // private static final int       VIEW_MODE_HIST      = 6;
     
     private MenuItem               ItemPreviewRGBA;
     private MenuItem               ItemPreviewGray;
@@ -65,7 +67,7 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
     private Mat                    mRgba;
     private Mat                    mIntermediateMat;
     private Mat                    mGray;
-    private int                    histSizeNum = 25;
+ //   private int                    histSizeNum = 25;
     
     private cvCameraPreview        cvPreviewInst1;
 	//private CameraBridgeViewBase cvCameraPreview;
@@ -232,7 +234,7 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
              //ItemSwitchCamera = menu.add("Toggle Native/Java camera");
              ItemPreviewRGBA = menu.add("Preview RGBA");
              ItemPreviewGray = menu.add("Preview GRAY");
-             ItemPreviewHist = menu.add("Preview Histogram");
+       //      ItemPreviewHist = menu.add("Preview Histogram");
              ItemPreviewCanny = menu.add("Canny");
              ItemPreviewFeatures = menu.add("Find features");
 		
@@ -269,12 +271,12 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
             	Toast toast = Toast.makeText(this, toastMesage, Toast.LENGTH_LONG);
                 toast.show();
                }
-             else if( item == ItemPreviewHist){
+         /*    else if( item == ItemPreviewHist){
             	mViewMode =  VIEW_MODE_HIST;
             	toastMesage = "Histogram";
             	Toast toast = Toast.makeText(this, toastMesage, Toast.LENGTH_LONG);
             	toast.show();
-              }
+              }    */
              else if (item == ItemPreviewGray){
             	mViewMode = VIEW_MODE_GRAY;
             	toastMesage = "GREY MODE";
@@ -345,6 +347,7 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 	public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
 		// TODO Auto-generated method stub
 		Mat localRGBA = inputFrame.rgba();
+		Mat innerWindow;
 		org.opencv.core.Size sizeRGBA = localRGBA.size();
 		
 		int rows = (int) sizeRGBA.height;
@@ -357,15 +360,27 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 		int innerWindowWidth = rows * 3 / 4;
 		
 		final int viewMode = mViewMode;
-		
+
 		switch (viewMode) {
-		case VIEW_MODE_HIST:
+	/*	case VIEW_MODE_HIST:
 		    // overlay the histogram on the input frame
 			Mat hist = new Mat();
 			int thikness = (int) (sizeRGBA.width / (histSizeNum + 10) / 5);
 	        if(thikness > 5) thikness = 5;
 	        int offset = (int) ((sizeRGBA.width - (5*histSizeNum + 4*10)*thikness)/2);
-			
+	     // RGB
+            for(int c=0; c<3; c++) {
+                Imgproc.calcHist(Arrays.asList(localRGBA), mChannels[c], mMat0, hist, mHistSize, mRanges);
+                Core.normalize(hist, hist, sizeRgba.height/2, 0, Core.NORM_INF);
+                hist.get(0, 0, mBuff);
+                for(int h=0; h<mHistSizeNum; h++) {
+                    mP1.x = mP2.x = offset + (c * (mHistSizeNum + 10) + h) * thikness;
+                    mP1.y = sizeRgba.height-1;
+                    mP2.y = mP1.y - 2 - (int)mBuff[h];
+                    Core.line(rgba, mP1, mP2, mColorsRGB[c], thikness);
+                }
+            }
+     */			
         case VIEW_MODE_GRAY:
             // input frame has gray scale format
             Imgproc.cvtColor(inputFrame.gray(), mRgba, Imgproc.COLOR_GRAY2RGBA, 4);
@@ -376,9 +391,11 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
             break;
         case VIEW_MODE_CANNY:
             // input frame has gray scale format
-            mRgba = inputFrame.rgba();
-            Imgproc.Canny(inputFrame.gray(), mIntermediateMat, 80, 100);
-            Imgproc.cvtColor(mIntermediateMat, mRgba, Imgproc.COLOR_GRAY2RGBA, 4);
+        	innerWindow = localRGBA.submat(topMargin, topMargin + innerWindowWidth, leftMargin, leftMargin + innerWindowHeight);
+           // mRgba = inputFrame.rgba();
+            Imgproc.Canny(innerWindow, mIntermediateMat, 80, 100);
+            Imgproc.cvtColor(mIntermediateMat, innerWindow, Imgproc.COLOR_GRAY2RGBA, 4);
+            innerWindow.release();
             break;
         case VIEW_MODE_FEATURES:
             // input frame has RGBA format
