@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.ListIterator;
+import java.io.*;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
@@ -16,17 +17,20 @@ import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.objdetect.CascadeClassifier;
+import org.opencv.samples.facedetect.DetectionBasedTracker;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
-import android.graphics.Point;
+import android.content.Context;
+//import android.graphics.Point;
 import android.hardware.Camera;
 import android.hardware.Camera.Size;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
-import android.view.Display;
+//import android.view.Display;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -41,35 +45,39 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 	
 	private Camera myCamera;
 	//private CameraPreview myPreview;
-	public Display display;
-	public Point size;
-	public static int screen_width;
-	public static int screen_height;
+	//public Display display;
+	//public Point size;
+	//public static int screen_width;
+	//public static int screen_height;
 	
 	private static final int       VIEW_MODE_RGBA      = 0;
-    private static final int       VIEW_MODE_GRAY      = 1;
-    private static final int       VIEW_MODE_CANNY     = 2;
+    //private static final int       VIEW_MODE_GRAY      = 1;
+    //private static final int       VIEW_MODE_CANNY     = 2;
     private static final int       VIEW_MODE_FEATURES  = 5;
-   // private static final int       VIEW_MODE_HIST      = 6;
+    // private static final int       VIEW_MODE_HIST      = 6;
     
     private MenuItem               ItemPreviewRGBA;
-    private MenuItem               ItemPreviewGray;
-    private MenuItem               ItemPreviewCanny;
+    //private MenuItem               ItemPreviewGray;
+    //private MenuItem               ItemPreviewCanny;
     private MenuItem               ItemPreviewFeatures;
-    private MenuItem               ItemPreviewHist;
+    //private MenuItem               ItemPreviewHist;
     private List<Size>             mResolutionList;
     private MenuItem[]             mEffectMenuItems;
     private SubMenu                mColorEffectsMenu;
     private MenuItem[]             mResolutionMenuItems;
     private SubMenu                mResolutionMenu;
-
+    private MenuItem               faceDetector1;
+    
     private int                    mViewMode;
     private Mat                    mRgba;
     private Mat                    mIntermediateMat;
     private Mat                    mGray;
  //   private int                    histSizeNum = 25;
     
+    private File                   cascadeFile;
     private cvCameraPreview        cvPreviewInst1;
+    private CascadeClassifier      javaDetector;
+    private DetectionBasedTracker  nativeDetector;
 	//private CameraBridgeViewBase cvCameraPreview;
     //private boolean              IsJavaCamera = true;
     //private MenuItem             ItemSwitchCamera = null;
@@ -87,6 +95,36 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
                     }catch (UnsatisfiedLinkError e) {
                     	 Log.i(MainActivity.TAG, "Library load failed" + e.getMessage());
                       }
+                    
+                    try{
+                    	InputStream inputFile = getResources().openRawResource(R.raw.fdresults);
+                    	File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
+                    	cascadeFile = new File(cascadeDir, "fdresults.xml");
+                    	FileOutputStream outputFile = new FileOutputStream(cascadeFile);
+                    	
+                    	byte[] buffer = new byte[4096];
+                    	int bytesRead;
+                    	while ((bytesRead = inputFile.read(buffer)) != -1) {
+                            outputFile.write(buffer, 0, bytesRead);
+                        }
+                    	inputFile.close();
+                        outputFile.close();
+                        
+                        javaDetector = new CascadeClassifier(cascadeFile.getAbsolutePath());
+                        if(javaDetector.empty()){
+                        	Log.e(MainActivity.TAG, "Failed to load cascade classifier");
+                            javaDetector = null;
+                          } 
+                        else
+                            Log.i(MainActivity.TAG, "Loaded cascade classifier from " + cascadeFile.getAbsolutePath());
+                        
+                        nativeDetector = new DetectionBasedTracker(cascadeFile.getAbsolutePath(), 0);
+                        
+                        cascadeDir.delete();
+                        
+                    }catch(IOException e){
+                    	
+                    }
                     
                     cvPreviewInst1.enableView();
                     cvPreviewInst1.setOnTouchListener(CameraActivity.this);
@@ -111,12 +149,12 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 		
 		super.onCreate(savedInstanceState);
 		
-		display = getWindowManager().getDefaultDisplay();
-		Point size = new Point();
-		display.getSize(size);
-		screen_width = size.x; screen_height = size.y;
+		//display = getWindowManager().getDefaultDisplay();
+		//Point size = new Point();
+		//display.getSize(size);
+		//screen_width = size.x; screen_height = size.y;
 		
-		Log.d(MainActivity.TAG, "screen size is: " + size.x + " * " + size.y);
+		//Log.d(MainActivity.TAG, "screen size is: " + size.x + " * " + size.y);
 		
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);      //let the preview window all always on
 		setContentView(R.layout.activity_camera);
@@ -233,10 +271,11 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 		     
              //ItemSwitchCamera = menu.add("Toggle Native/Java camera");
              ItemPreviewRGBA = menu.add("Preview RGBA");
-             ItemPreviewGray = menu.add("Preview GRAY");
-       //      ItemPreviewHist = menu.add("Preview Histogram");
-             ItemPreviewCanny = menu.add("Canny");
+          //   ItemPreviewGray = menu.add("Preview GRAY");
+          //     ItemPreviewHist = menu.add("Preview Histogram");
+           //  ItemPreviewCanny = menu.add("Canny");
              ItemPreviewFeatures = menu.add("Find features");
+             faceDetector1 = menu.add("FaceDetection1");
 		
 		   return true;
 	   }    
@@ -277,24 +316,30 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
             	Toast toast = Toast.makeText(this, toastMesage, Toast.LENGTH_LONG);
             	toast.show();
               }    */
-             else if (item == ItemPreviewGray){
+         /*    else if (item == ItemPreviewGray){
             	mViewMode = VIEW_MODE_GRAY;
             	toastMesage = "GREY MODE";
             	Toast toast = Toast.makeText(this, toastMesage, Toast.LENGTH_LONG);
                 toast.show();
-               }
+               }     
             else if (item == ItemPreviewCanny){
             	 mViewMode = VIEW_MODE_CANNY;
             	 toastMesage = "CANNY MODE";
              	 Toast toast = Toast.makeText(this, toastMesage, Toast.LENGTH_LONG);
                  toast.show();
-               }
+               }    */
             else if (item == ItemPreviewFeatures){
             	mViewMode = VIEW_MODE_FEATURES;
             	toastMesage = "FEATURES MODE";
             	Toast toast = Toast.makeText(this, toastMesage, Toast.LENGTH_LONG);
                 toast.show();
-               }  
+               } 
+            else if (item == faceDetector1){
+            	
+            	toastMesage = "FACE DETECTOR1";
+            	Toast toast = Toast.makeText(this, toastMesage, Toast.LENGTH_LONG);
+                toast.show();
+               }
              if ( item.getGroupId() == 1){
             	cvPreviewInst1.setEffect((String) item.getTitle());
                 Toast.makeText(this, cvPreviewInst1.getEffect(), Toast.LENGTH_SHORT).show();
@@ -329,9 +374,12 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 	@Override
 	public void onCameraViewStarted(int width, int height) {
 		// TODO Auto-generated method stub
-		mRgba = new Mat(height, width, CvType.CV_8UC4);
-        mIntermediateMat = new Mat(height, width, CvType.CV_8UC4);
-        mGray = new Mat(height, width, CvType.CV_8UC1);
+		//mRgba = new Mat(height, width, CvType.CV_8UC4);
+        //mIntermediateMat = new Mat(height, width, CvType.CV_8UC4);
+        //mGray = new Mat(height, width, CvType.CV_8UC1);
+		mRgba = new Mat();
+		mIntermediateMat = new Mat();
+		mGray = new Mat();
         
 	}
 
@@ -346,9 +394,9 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 	@Override
 	public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
 		// TODO Auto-generated method stub
-		Mat localRGBA = inputFrame.rgba();
+	    mRgba = inputFrame.rgba();
 		Mat innerWindow;
-		org.opencv.core.Size sizeRGBA = localRGBA.size();
+		org.opencv.core.Size sizeRGBA = mRgba.size();
 		
 		int rows = (int) sizeRGBA.height;
 		int cols = (int) sizeRGBA.width;
@@ -357,7 +405,7 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 		int topMargin = rows / 8;
 		
 		int innerWindowHeight = rows * 3 / 4;
-		int innerWindowWidth = rows * 3 / 4;
+		int innerWindowWidth = cols * 3 / 4;
 		
 		final int viewMode = mViewMode;
 
@@ -380,27 +428,27 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
                     Core.line(rgba, mP1, mP2, mColorsRGB[c], thikness);
                 }
             }
-     */			
+     			
         case VIEW_MODE_GRAY:
             // input frame has gray scale format
             Imgproc.cvtColor(inputFrame.gray(), mRgba, Imgproc.COLOR_GRAY2RGBA, 4);
-            break;
+            break;    */
         case VIEW_MODE_RGBA:
             // input frame has RBGA format
             // mRgba = inputFrame.rgba();
             break;
-        case VIEW_MODE_CANNY:
+    /*    case VIEW_MODE_CANNY:
             // input frame has gray scale format
-        	innerWindow = localRGBA.submat(topMargin, topMargin + innerWindowWidth, leftMargin, leftMargin + innerWindowHeight);
+        	innerWindow = mRgba.submat(topMargin, topMargin + innerWindowHeight, leftMargin, leftMargin + innerWindowWidth);
            // mRgba = inputFrame.rgba();
             Imgproc.Canny(innerWindow, mIntermediateMat, 80, 100);
             Imgproc.cvtColor(mIntermediateMat, innerWindow, Imgproc.COLOR_GRAY2RGBA, 4);
             innerWindow.release();
-            break;
+            break;    */
         case VIEW_MODE_FEATURES:
             // input frame has RGBA format
         	//Log.d(MainActivity.TAG, "debug1");
-            mRgba = inputFrame.rgba();
+            //mRgba = inputFrame.rgba();
             mGray = inputFrame.gray();
             //Log.d(MainActivity.TAG, "debug2");
             FindFeatures(mGray.getNativeObjAddr(), mRgba.getNativeObjAddr());
