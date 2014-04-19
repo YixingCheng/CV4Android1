@@ -2,6 +2,7 @@ package sc.vision.cv4android1;
 
 import android.os.Bundle;
 import android.app.Activity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -18,6 +19,8 @@ public class MainActivity extends Activity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		Log.i(TAG, "MainActivity initialized!");
+		
 		setContentView(R.layout.activity_main);
 		
 		//add listener to the button
@@ -37,6 +40,7 @@ public class MainActivity extends Activity {
 				// TODO Auto-generated method stub
 				 /* when you are writing in the parentheses of setOnClickListener,
 				  *  you have to use FromActivity. to qualify the this*/
+				 Log.i(TAG, "Video butten Clicked!");
 				 Intent videoIntent = new Intent(MainActivity.this, CameraActivity.class);   
                  startActivity(videoIntent); 
 			  }			

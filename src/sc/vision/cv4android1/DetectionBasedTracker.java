@@ -4,7 +4,15 @@ import org.opencv.core.Mat;
 import org.opencv.core.MatOfRect;
 
 public class DetectionBasedTracker {
+	private long mNativeObj = 0;
 
+    private static native long nativeCreateObject(String cascadeName, int minFaceSize);
+    private static native void nativeDestroyObject(long thiz);
+    private static native void nativeStart(long thiz);
+    private static native void nativeStop(long thiz);
+    private static native void nativeSetFaceSize(long thiz, int size);
+    private static native void nativeDetect(long thiz, long inputImage, long faces);
+	 
 	public DetectionBasedTracker(String cascadeName, int minFaceSize) {
 		// TODO Auto-generated constructor stub
 		 mNativeObj = nativeCreateObject(cascadeName, minFaceSize);
@@ -30,12 +38,4 @@ public class DetectionBasedTracker {
         mNativeObj = 0;
     }
 
-    private long mNativeObj = 0;
-
-    private static native long nativeCreateObject(String cascadeName, int minFaceSize);
-    private static native void nativeDestroyObject(long thiz);
-    private static native void nativeStart(long thiz);
-    private static native void nativeStop(long thiz);
-    private static native void nativeSetFaceSize(long thiz, int size);
-    private static native void nativeDetect(long thiz, long inputImage, long faces);
 }

@@ -18,7 +18,7 @@ int layout activity_camera 0x7f030000
 int layout activity_main 0x7f030001
 int menu camera 0x7f090000
 int menu main 0x7f090001
-int raw fdresults 0x7f040000
+int raw cv4android1_lbpcascade 0x7f040000
 int string action_settings 0x7f070001
 int string app_name 0x7f070000
 int string camera_button 0x7f070006

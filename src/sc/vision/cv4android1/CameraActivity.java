@@ -14,11 +14,15 @@ import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Core;
+//import org.opencv.core.Size;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfRect;
+import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
-import org.opencv.samples.facedetect.DetectionBasedTracker;
+//import org.opencv.samples.facedetect.DetectionBasedTracker;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
@@ -50,11 +54,14 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 	//public static int screen_width;
 	//public static int screen_height;
 	
-	private static final int       VIEW_MODE_RGBA      = 0;
+	private static final Scalar    FACE_RECT_COLOR     = new Scalar(0, 255, 0, 255);
+	private static final int       VIEW_MODE_RGBA      = 2;
     //private static final int       VIEW_MODE_GRAY      = 1;
     //private static final int       VIEW_MODE_CANNY     = 2;
     private static final int       VIEW_MODE_FEATURES  = 5;
     // private static final int       VIEW_MODE_HIST      = 6;
+    private static final int        JAVA_DETECTOR       = 0;
+    private static final int        NATIVE_DETECTOR     = 1;
     
     private MenuItem               ItemPreviewRGBA;
     //private MenuItem               ItemPreviewGray;
@@ -66,18 +73,22 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
     private SubMenu                mColorEffectsMenu;
     private MenuItem[]             mResolutionMenuItems;
     private SubMenu                mResolutionMenu;
-    private MenuItem               faceDetector1;
+    private MenuItem               javaDetectorMenu;
+    private MenuItem               nativeDetectorMenu;
     
     private int                    mViewMode;
     private Mat                    mRgba;
     private Mat                    mIntermediateMat;
     private Mat                    mGray;
+    private float                  relativeFaceSize   = 0.2f;
+    private int                    absoluteFaceSize   = 0;
  //   private int                    histSizeNum = 25;
     
     private File                   cascadeFile;
     private cvCameraPreview        cvPreviewInst1;
     private CascadeClassifier      javaDetector;
     private DetectionBasedTracker  nativeDetector;
+  //  private String[]               detectorName;
 	//private CameraBridgeViewBase cvCameraPreview;
     //private boolean              IsJavaCamera = true;
     //private MenuItem             ItemSwitchCamera = null;
@@ -97,13 +108,13 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
                       }
                     
                     try{
-                    	InputStream inputFile = getResources().openRawResource(R.raw.fdresults);
-                    	File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
-                    	cascadeFile = new File(cascadeDir, "fdresults.xml");
+                    	InputStream inputFile = getResources().openRawResource(R.raw.cv4android1_lbpcascade);  //filename in raw folder has to be lower case
+                    	File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);                      // create/retrieve a directory where App save it's own data
+                    	cascadeFile = new File(cascadeDir, "cv4android1_lbpcascade.xml");               // the file where the trained cascade data will be saved
                     	FileOutputStream outputFile = new FileOutputStream(cascadeFile);
                     	
                     	byte[] buffer = new byte[4096];
-                    	int bytesRead;
+                    	int bytesRead;                                                 //basically transfer data from one file to another
                     	while ((bytesRead = inputFile.read(buffer)) != -1) {
                             outputFile.write(buffer, 0, bytesRead);
                         }
@@ -115,20 +126,24 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
                         	Log.e(MainActivity.TAG, "Failed to load cascade classifier");
                             javaDetector = null;
                           } 
-                        else
+                        else{
                             Log.i(MainActivity.TAG, "Loaded cascade classifier from " + cascadeFile.getAbsolutePath());
+                          }
                         
+                        Log.i(MainActivity.TAG, "debug");
                         nativeDetector = new DetectionBasedTracker(cascadeFile.getAbsolutePath(), 0);
-                        
+                      
                         cascadeDir.delete();
-                        
+                                              
                     }catch(IOException e){
-                    	
-                    }
+                    	e.printStackTrace();
+                        Log.e(MainActivity.TAG, "Failed to load cascade. Exception thrown: " + e);
+                    }   
+                    
                     
                     cvPreviewInst1.enableView();
                     cvPreviewInst1.setOnTouchListener(CameraActivity.this);
-                } break;
+                }   break;  
                 default:
                 {
                     super.onManagerConnected(status);
@@ -139,6 +154,9 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 
     public CameraActivity() {
         Log.i(MainActivity.TAG, "Instantiated new " + this.getClass());
+     //   detectorName = new String[2];
+     //   detectorName[JAVA_DETECTOR] = "Java";
+     //   detectorName[NATIVE_DETECTOR] = "Native";
     }
     
 	@TargetApi(Build.VERSION_CODES.HONEYCOMB_MR2)
@@ -220,7 +238,7 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 	/**
 	 * Set up the {@link android.app.ActionBar}, if the API is available.
 	 */
-	@TargetApi(Build.VERSION_CODES.HONEYCOMB)
+	/*    @TargetApi(Build.VERSION_CODES.HONEYCOMB)                                        //take the action bar out
     	private void setupActionBar() {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
 			//Log.d(MainActivity.TAG, "debug4");
@@ -228,7 +246,7 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 			//Log.d(MainActivity.TAG, "debug5");
 			getActionBar().setDisplayHomeAsUpEnabled(false);
 		}
-	}  
+	}  */ 
        // Since this activity will be used to hold camera preview,
        // so we don't need the action bar
  
@@ -240,10 +258,10 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 		     
 		     List<String> effects = cvPreviewInst1.getEffectList();
 		     
-		     if (effects == null) {
-		            Log.e(MainActivity.TAG, "Color effects are not supported by device!");
-		            return true;
-		        }
+		     if(effects == null) {
+		           Log.e(MainActivity.TAG, "Color effects are not supported by device!");
+		           return true;
+		       }
 		     
 		     mColorEffectsMenu = menu.addSubMenu("Color Effect");
 		     mEffectMenuItems = new MenuItem[effects.size()];
@@ -275,7 +293,8 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
           //     ItemPreviewHist = menu.add("Preview Histogram");
            //  ItemPreviewCanny = menu.add("Canny");
              ItemPreviewFeatures = menu.add("Find features");
-             faceDetector1 = menu.add("FaceDetection1");
+             javaDetectorMenu = menu.add("Java Detector");
+             nativeDetectorMenu = menu.add("Native Detector");
 		
 		   return true;
 	   }    
@@ -334,12 +353,21 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
             	Toast toast = Toast.makeText(this, toastMesage, Toast.LENGTH_LONG);
                 toast.show();
                } 
-            else if (item == faceDetector1){
-            	
-            	toastMesage = "FACE DETECTOR1";
+            else if (item == javaDetectorMenu){
+            	mViewMode = JAVA_DETECTOR;
+            	setDetectorType(JAVA_DETECTOR);
+            	toastMesage = "JAVA DETECTOR";
             	Toast toast = Toast.makeText(this, toastMesage, Toast.LENGTH_LONG);
                 toast.show();
                }
+            else if (item == nativeDetectorMenu){
+            	mViewMode = NATIVE_DETECTOR;
+            	setDetectorType(NATIVE_DETECTOR);
+            	toastMesage = "NATIVE DETECTOR";
+            	Toast toast = Toast.makeText(this, toastMesage, Toast.LENGTH_LONG);
+                toast.show();
+               }
+             
              if ( item.getGroupId() == 1){
             	cvPreviewInst1.setEffect((String) item.getTitle());
                 Toast.makeText(this, cvPreviewInst1.getEffect(), Toast.LENGTH_SHORT).show();
@@ -395,7 +423,20 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 	public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
 		// TODO Auto-generated method stub
 	    mRgba = inputFrame.rgba();
-		Mat innerWindow;
+        mGray = inputFrame.gray();
+
+        if (absoluteFaceSize == 0) {
+            int height = mGray.rows();
+            if (Math.round(height * relativeFaceSize) > 0) {
+                absoluteFaceSize = Math.round(height * relativeFaceSize);
+            }
+            nativeDetector.setMinFaceSize(absoluteFaceSize);
+         }
+
+        MatOfRect faces = new MatOfRect();
+        Rect[] facesArray;
+	    
+	/*	Mat innerWindow;
 		org.opencv.core.Size sizeRGBA = mRgba.size();
 		
 		int rows = (int) sizeRGBA.height;
@@ -405,7 +446,7 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 		int topMargin = rows / 8;
 		
 		int innerWindowHeight = rows * 3 / 4;
-		int innerWindowWidth = cols * 3 / 4;
+		int innerWindowWidth = cols * 3 / 4;  */
 		
 		final int viewMode = mViewMode;
 
@@ -454,13 +495,45 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
             FindFeatures(mGray.getNativeObjAddr(), mRgba.getNativeObjAddr());
             //Log.d(MainActivity.TAG, "debug3");
             break;
+        case JAVA_DETECTOR:
+        	if (javaDetector != null)
+                javaDetector.detectMultiScale(mGray, faces, 1.1, 2, 2, // TODO: objdetect.CV_HAAR_SCALE_IMAGE
+                        new org.opencv.core.Size(absoluteFaceSize, absoluteFaceSize), new org.opencv.core.Size());
+        	
+        	facesArray = faces.toArray();
+            for (int i = 0; i < facesArray.length; i++)
+                Core.rectangle(mRgba, facesArray[i].tl(), facesArray[i].br(), FACE_RECT_COLOR, 3);
+            
+            break;
+        case NATIVE_DETECTOR:
+        	 if (nativeDetector != null)
+                 nativeDetector.detect(mGray, faces);
+        	 
+        	 facesArray = faces.toArray();
+             for (int i = 0; i < facesArray.length; i++)
+                 Core.rectangle(mRgba, facesArray[i].tl(), facesArray[i].br(), FACE_RECT_COLOR, 3);
+        	 
+        	 break;
+            
         }
 		   
-		return mRgba;  
-		
+		return mRgba; 
 		//return inputFrame.rgba();
 	}   
 
+	private void setDetectorType(int type) {
+            switch(type){
+                 case NATIVE_DETECTOR:
+                	 Log.i(MainActivity.TAG, "Detection Based Tracker enabled");
+                     nativeDetector.start();
+                     break;
+                 case JAVA_DETECTOR:
+                	 Log.i(MainActivity.TAG, "Cascade detector enabled");
+                     nativeDetector.stop();
+                     break;
+              }
+        
+    }
 	
 	public native void FindFeatures(long matAddrGr, long matAddrRgba);
 
