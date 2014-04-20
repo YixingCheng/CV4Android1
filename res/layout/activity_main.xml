@@ -34,7 +34,6 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center_vertical|center_horizontal|center"
-            android:onClick="openCamera"
             android:text="@string/open_camera" />
 
         <Button
@@ -43,7 +42,6 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center_vertical|center_horizontal|center"
-            android:onClick="takeVideo"
             android:text="@string/take_video" />
 
     </LinearLayout>

@@ -6,9 +6,9 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.content.Context;
-import android.content.pm.PackageManager;
-import android.hardware.Camera;
+//import android.content.Context;
+//import android.content.pm.PackageManager;
+//import android.hardware.Camera;
 import android.widget.Button;
 import android.content.Intent;
 
@@ -25,10 +25,9 @@ public class MainActivity extends Activity {
 		
 		//add listener to the button
 		addListenerToButton();
-		
 	}
 	
-	public void addListenerToButton(){
+	private void addListenerToButton(){
 		
 		final Button takeVideo = (Button) findViewById(R.id.take_video);
 		final Button takeImage = (Button) findViewById(R.id.take_image);
@@ -54,9 +53,7 @@ public class MainActivity extends Activity {
 				 Intent videoIntent = new Intent(MainActivity.this, CameraActivity.class);   
                  startActivity(videoIntent); 
 			}
-			
 		});
-		
 	}
 
 	@Override
@@ -66,7 +63,7 @@ public class MainActivity extends Activity {
 		return true;
 	}
 
-	public boolean checkCameraHardware(Context context){
+ /*	public boolean checkCameraHardware(Context context){
 		if (context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA)){
 			return true;
 		  }
@@ -84,7 +81,7 @@ public class MainActivity extends Activity {
 			
 		  }
 		return c;
-	}
+	}    */
 	
 	
 	

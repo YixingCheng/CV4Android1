@@ -3,7 +3,7 @@
     xmlns:opencv="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent" >
-
+  <!--   
     <org.opencv.android.JavaCameraView
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
@@ -19,12 +19,16 @@
         android:id="@+id/tutorial1_activity_native_surface_view"
         opencv:show_fps="true"
         opencv:camera_id="any" />
-    
+  -->  
     <sc.vision.cv4android1.cvCameraPreview
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="gone"
         opencv:show_fps="true"
         android:id="@+id/tutorial3_activity_java_surface_view" />
+    
+    <include
+        android:id="@+id/get_result_button_layout"
+        layout="@layout/get_result_button" />
 
 </FrameLayout>

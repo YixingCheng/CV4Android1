@@ -5,6 +5,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.ListIterator;
 import java.io.*;
 
@@ -27,6 +28,7 @@ import org.opencv.objdetect.CascadeClassifier;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 //import android.graphics.Point;
 import android.hardware.Camera;
 import android.hardware.Camera.Size;
@@ -43,7 +45,9 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.View.OnTouchListener;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.Toast;
+import android.view.View.OnClickListener;
 
 public class CameraActivity extends Activity implements CvCameraViewListener2, OnTouchListener{
 	
@@ -61,20 +65,24 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
     private static final int       VIEW_MODE_FEATURES  = 5;
     // private static final int       VIEW_MODE_HIST      = 6;
     private static final int        JAVA_DETECTOR       = 0;
+    private static final int        JAVA_HAAR_DETECTOR  = 4;
     private static final int        NATIVE_DETECTOR     = 1;
+    private static final int        NATIVE_HAAR_DETECTOR = 3;
     
     private MenuItem               ItemPreviewRGBA;
     //private MenuItem               ItemPreviewGray;
     //private MenuItem               ItemPreviewCanny;
-    private MenuItem               ItemPreviewFeatures;
+ //   private MenuItem               ItemPreviewFeatures;
     //private MenuItem               ItemPreviewHist;
     private List<Size>             mResolutionList;
-    private MenuItem[]             mEffectMenuItems;
-    private SubMenu                mColorEffectsMenu;
+ //   private MenuItem[]             mEffectMenuItems;
+ //   private SubMenu                mColorEffectsMenu;
     private MenuItem[]             mResolutionMenuItems;
     private SubMenu                mResolutionMenu;
     private MenuItem               javaDetectorMenu;
+    private MenuItem               javaHaarDetectorMenu;
     private MenuItem               nativeDetectorMenu;
+    private MenuItem               nativeHaarDetectorMenu;
     
     private int                    mViewMode;
     private Mat                    mRgba;
@@ -83,11 +91,22 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
     private float                  relativeFaceSize   = 0.2f;
     private int                    absoluteFaceSize   = 0;
  //   private int                    histSizeNum = 25;
+    private  Rect[]                 javaLbpArray;
+    private  Rect[]                 nativeLbpArray;
+    private  Rect[]                 javaHaarArray;
+    private  Rect[]                 nativeHaarArray;
+    public ArrayList<Mat>         javaLbpMats;
+    public ArrayList<Mat>         nativeLbpMats;
+    public ArrayList<Mat>         javaHaarMats;
+    public ArrayList<Mat>         nativeHaarMats;
     
     private File                   cascadeFile;
+    private File                   haarFile;
     private cvCameraPreview        cvPreviewInst1;
     private CascadeClassifier      javaDetector;
+    private CascadeClassifier      javaHaarDetector;
     private DetectionBasedTracker  nativeDetector;
+    private DetectionBasedTracker  haarDetector;
   //  private String[]               detectorName;
 	//private CameraBridgeViewBase cvCameraPreview;
     //private boolean              IsJavaCamera = true;
@@ -109,9 +128,12 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
                     
                     try{
                     	InputStream inputFile = getResources().openRawResource(R.raw.cv4android1_lbpcascade);  //filename in raw folder has to be lower case
+                    	InputStream inputHaar = getResources().openRawResource(R.raw.cv4android1_haarcascade);
                     	File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);                      // create/retrieve a directory where App save it's own data
                     	cascadeFile = new File(cascadeDir, "cv4android1_lbpcascade.xml");               // the file where the trained cascade data will be saved
+                    	haarFile    = new File(cascadeDir, "cv4android1_haarcascade.xml");
                     	FileOutputStream outputFile = new FileOutputStream(cascadeFile);
+                    	FileOutputStream outputHaar = new FileOutputStream(haarFile);
                     	
                     	byte[] buffer = new byte[4096];
                     	int bytesRead;                                                 //basically transfer data from one file to another
@@ -121,7 +143,16 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
                     	inputFile.close();
                         outputFile.close();
                         
+                        byte[] buffer1 = new byte[4096];
+                    	int bytesRead1;                                                 //basically transfer data from one file to another
+                    	while ((bytesRead1 = inputHaar.read(buffer1)) != -1) {
+                            outputHaar.write(buffer1, 0, bytesRead1);
+                        }
+                    	inputHaar.close();
+                        outputHaar.close();
+                        
                         javaDetector = new CascadeClassifier(cascadeFile.getAbsolutePath());
+                        javaHaarDetector = new CascadeClassifier(haarFile.getAbsolutePath());
                         if(javaDetector.empty()){
                         	Log.e(MainActivity.TAG, "Failed to load cascade classifier");
                             javaDetector = null;
@@ -130,16 +161,23 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
                             Log.i(MainActivity.TAG, "Loaded cascade classifier from " + cascadeFile.getAbsolutePath());
                           }
                         
-                        Log.i(MainActivity.TAG, "debug");
+                        if(javaHaarDetector.empty()){
+                        	Log.e(MainActivity.TAG, "Failed to load haar cascade classifier");
+                            javaHaarDetector = null;
+                          } 
+                        else{
+                            Log.i(MainActivity.TAG, "Loaded haarcascade classifier from " + haarFile.getAbsolutePath());
+                          }
+                        
                         nativeDetector = new DetectionBasedTracker(cascadeFile.getAbsolutePath(), 0);
-                      
+                        haarDetector   = new DetectionBasedTracker(haarFile.getAbsolutePath(), 0);
+                        
                         cascadeDir.delete();
                                               
                     }catch(IOException e){
                     	e.printStackTrace();
                         Log.e(MainActivity.TAG, "Failed to load cascade. Exception thrown: " + e);
                     }   
-                    
                     
                     cvPreviewInst1.enableView();
                     cvPreviewInst1.setOnTouchListener(CameraActivity.this);
@@ -199,6 +237,8 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 		cvPreviewInst1.setVisibility(SurfaceView.VISIBLE);
 		
 		cvPreviewInst1.setCvCameraViewListener(this);
+		
+		addListenerToButton();
 
 		//Log.d(MainActivity.TAG, "debug2");
 		//myCamera = MainActivity.getCameraInstance();
@@ -256,7 +296,7 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 		//getMenuInflater().inflate(R.menu.camera, menu);
 		     Log.i(MainActivity.TAG, "called onCreateOptionsMenu");
 		     
-		     List<String> effects = cvPreviewInst1.getEffectList();
+		/*   List<String> effects = cvPreviewInst1.getEffectList();
 		     
 		     if(effects == null) {
 		           Log.e(MainActivity.TAG, "Color effects are not supported by device!");
@@ -272,14 +312,15 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 		        String element = effectItr.next();
 		        mEffectMenuItems[idx] = mColorEffectsMenu.add(1, idx, Menu.NONE, element);
 		        idx++;
-		      }
+		      }       */
+		     
 		     
 		     mResolutionMenu = menu.addSubMenu("Resolution");
 		     mResolutionList = cvPreviewInst1.getResolutionList();
-		     mResolutionMenuItems = new MenuItem[mResolutionList.size()];
+		     mResolutionMenuItems = new MenuItem[mResolutionList.size()];    
 		     
 		     ListIterator<Size> resolutionItr = mResolutionList.listIterator();
-		     idx = 0;
+		     int idx = 0;
 		       while(resolutionItr.hasNext()) {
 		          Size element = resolutionItr.next();
 		           mResolutionMenuItems[idx] = mResolutionMenu.add(2, idx, Menu.NONE,
@@ -292,10 +333,12 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
           //   ItemPreviewGray = menu.add("Preview GRAY");
           //     ItemPreviewHist = menu.add("Preview Histogram");
            //  ItemPreviewCanny = menu.add("Canny");
-             ItemPreviewFeatures = menu.add("Find features");
-             javaDetectorMenu = menu.add("Java Detector");
-             nativeDetectorMenu = menu.add("Native Detector");
-		
+        //     ItemPreviewFeatures = menu.add("Find features");
+             javaDetectorMenu = menu.add("Java LBP");
+             nativeDetectorMenu = menu.add("Native LBP");
+             javaHaarDetectorMenu = menu.add("Java Haar");
+             nativeHaarDetectorMenu = menu.add("Native Haar");
+             
 		   return true;
 	   }    
 
@@ -346,33 +389,47 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
             	 toastMesage = "CANNY MODE";
              	 Toast toast = Toast.makeText(this, toastMesage, Toast.LENGTH_LONG);
                  toast.show();
-               }    */
+               }    
             else if (item == ItemPreviewFeatures){
             	mViewMode = VIEW_MODE_FEATURES;
             	toastMesage = "FEATURES MODE";
             	Toast toast = Toast.makeText(this, toastMesage, Toast.LENGTH_LONG);
                 toast.show();
-               } 
+               }   */
             else if (item == javaDetectorMenu){
             	mViewMode = JAVA_DETECTOR;
             	setDetectorType(JAVA_DETECTOR);
-            	toastMesage = "JAVA DETECTOR";
+            	toastMesage = "JAVA LBP DETECTOR";
             	Toast toast = Toast.makeText(this, toastMesage, Toast.LENGTH_LONG);
                 toast.show();
                }
             else if (item == nativeDetectorMenu){
             	mViewMode = NATIVE_DETECTOR;
             	setDetectorType(NATIVE_DETECTOR);
-            	toastMesage = "NATIVE DETECTOR";
+            	toastMesage = "NATIVE LBP DETECTOR";
             	Toast toast = Toast.makeText(this, toastMesage, Toast.LENGTH_LONG);
                 toast.show();
                }
-             
-             if ( item.getGroupId() == 1){
+            else if (item == nativeHaarDetectorMenu){
+            	mViewMode = NATIVE_HAAR_DETECTOR;
+            	setDetectorType(NATIVE_HAAR_DETECTOR);
+            	toastMesage = "NATIVE HAAR DETECTOR";
+            	Toast toast = Toast.makeText(this, toastMesage, Toast.LENGTH_LONG);
+                toast.show();
+               }
+            else if (item == javaHaarDetectorMenu){
+            	mViewMode = JAVA_HAAR_DETECTOR;
+            	setDetectorType(JAVA_HAAR_DETECTOR);
+            	toastMesage = "JAVA HAAR DETECTOR";
+            	Toast toast = Toast.makeText(this, toastMesage, Toast.LENGTH_LONG);
+                toast.show();
+               }
+        /*     if ( item.getGroupId() == 1){
             	cvPreviewInst1.setEffect((String) item.getTitle());
                 Toast.makeText(this, cvPreviewInst1.getEffect(), Toast.LENGTH_SHORT).show();
                }
-            else if ( item.getGroupId() == 2){
+            else  */
+                if ( item.getGroupId() == 1){
             	int id = item.getItemId();
                 Size resolution = mResolutionList.get(id);
                 cvPreviewInst1.setResolution(resolution);
@@ -408,6 +465,10 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 		mRgba = new Mat();
 		mIntermediateMat = new Mat();
 		mGray = new Mat();
+		javaLbpMats = new ArrayList<Mat>();
+	    nativeLbpMats = new ArrayList<Mat>();
+	    javaHaarMats = new ArrayList<Mat>();
+	    nativeHaarMats = new ArrayList<Mat>();
         
 	}
 
@@ -434,7 +495,7 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
          }
 
         MatOfRect faces = new MatOfRect();
-        Rect[] facesArray;
+  //    Rect[] facesArray;
 	    
 	/*	Mat innerWindow;
 		org.opencv.core.Size sizeRGBA = mRgba.size();
@@ -486,7 +547,7 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
             Imgproc.cvtColor(mIntermediateMat, innerWindow, Imgproc.COLOR_GRAY2RGBA, 4);
             innerWindow.release();
             break;    */
-        case VIEW_MODE_FEATURES:
+   /*     case VIEW_MODE_FEATURES:
             // input frame has RGBA format
         	//Log.d(MainActivity.TAG, "debug1");
             //mRgba = inputFrame.rgba();
@@ -494,28 +555,48 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
             //Log.d(MainActivity.TAG, "debug2");
             FindFeatures(mGray.getNativeObjAddr(), mRgba.getNativeObjAddr());
             //Log.d(MainActivity.TAG, "debug3");
-            break;
+            break;     */
         case JAVA_DETECTOR:
         	if (javaDetector != null)
                 javaDetector.detectMultiScale(mGray, faces, 1.1, 2, 2, // TODO: objdetect.CV_HAAR_SCALE_IMAGE
                         new org.opencv.core.Size(absoluteFaceSize, absoluteFaceSize), new org.opencv.core.Size());
         	
-        	facesArray = faces.toArray();
-            for (int i = 0; i < facesArray.length; i++)
-                Core.rectangle(mRgba, facesArray[i].tl(), facesArray[i].br(), FACE_RECT_COLOR, 3);
-            
+        	javaLbpArray = faces.toArray();
+            for (int i = 0; i < javaLbpArray.length; i++){
+                  Core.rectangle(mRgba, javaLbpArray[i].tl(), javaLbpArray[i].br(), FACE_RECT_COLOR, 3);
+                  javaLbpMats.add(mRgba.submat(javaLbpArray[i]));
+              }
             break;
         case NATIVE_DETECTOR:
         	 if (nativeDetector != null)
                  nativeDetector.detect(mGray, faces);
         	 
-        	 facesArray = faces.toArray();
-             for (int i = 0; i < facesArray.length; i++)
-                 Core.rectangle(mRgba, facesArray[i].tl(), facesArray[i].br(), FACE_RECT_COLOR, 3);
+        	 nativeLbpArray = faces.toArray();
+             for (int i = 0; i < nativeLbpArray.length; i++)
+                 Core.rectangle(mRgba, nativeLbpArray[i].tl(), nativeLbpArray[i].br(), FACE_RECT_COLOR, 3);
         	 
         	 break;
+        case NATIVE_HAAR_DETECTOR:
+        	if (haarDetector != null)
+                haarDetector.detect(mGray, faces);
+       	 
+       	    nativeHaarArray = faces.toArray();
+            for (int i = 0; i < nativeHaarArray.length; i++)
+                Core.rectangle(mRgba, nativeHaarArray[i].tl(), nativeHaarArray[i].br(), FACE_RECT_COLOR, 3);
+       	 
+       	     break;
+        case JAVA_HAAR_DETECTOR:
+        	if (javaHaarDetector != null)
+                javaHaarDetector.detectMultiScale(mGray, faces, 1.1, 2, 2, // TODO: objdetect.CV_HAAR_SCALE_IMAGE
+                        new org.opencv.core.Size(absoluteFaceSize, absoluteFaceSize), new org.opencv.core.Size());
+        	
+        	javaHaarArray = faces.toArray();
+            for (int i = 0; i < javaHaarArray.length; i++)
+                Core.rectangle(mRgba, javaHaarArray[i].tl(), javaHaarArray[i].br(), FACE_RECT_COLOR, 3);
             
-        }
+            break;
+       	 
+       }
 		   
 		return mRgba; 
 		//return inputFrame.rgba();
@@ -525,11 +606,23 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
             switch(type){
                  case NATIVE_DETECTOR:
                 	 Log.i(MainActivity.TAG, "Detection Based Tracker enabled");
+                	 haarDetector.stop();
                      nativeDetector.start();
                      break;
                  case JAVA_DETECTOR:
                 	 Log.i(MainActivity.TAG, "Cascade detector enabled");
                      nativeDetector.stop();
+                     haarDetector.stop();
+                     break;
+                 case NATIVE_HAAR_DETECTOR:
+                	 Log.i(MainActivity.TAG, "Haar cascade detector enabled");
+                	 nativeDetector.stop();
+                	 haarDetector.start();
+                	 break;
+                 case JAVA_HAAR_DETECTOR:
+                	 Log.i(MainActivity.TAG, "Cascade detector enabled");
+                     nativeDetector.stop();
+                     haarDetector.stop();
                      break;
               }
         
@@ -549,4 +642,32 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
         Toast.makeText(this, fileName + " saved", Toast.LENGTH_SHORT).show();
         return false;
 	}
-  }
+	
+  private void addListenerToButton(){
+		
+		final Button getResult = (Button) findViewById(R.id.get_results);
+		
+		getResult.setOnClickListener(new OnClickListener() {
+
+			@Override
+			public void onClick(View view) {
+				// TODO Auto-generated method stub
+				 /* when you are writing in the parentheses of setOnClickListener,
+				  *  you have to use FromActivity. to qualify the this*/
+				 
+				 haarDetector.stop();                      //stop the two detectors
+				 nativeDetector.stop();
+				 
+				 Log.i(MainActivity.TAG, "Get Results Clicked!");
+				 Intent resultIntent = new Intent(CameraActivity.this, ResultActivity.class);   
+                 startActivity(resultIntent); 
+			  }			
+		   });
+		
+	}
+  
+  private void writeImages(){
+	     
+    }
+}
+

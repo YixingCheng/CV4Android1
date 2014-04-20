@@ -8,5 +8,7 @@
     <string name="open_camera">Image</string>
     <string name="take_video">Video</string>
     <string name="camera_button">Capture</string>
+    <string name="get_results">Get Result</string>
+    <string name="title_activity_result">ResultActivity</string>
 
 </resources>

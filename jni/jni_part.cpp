@@ -47,7 +47,6 @@ JNIEXPORT jlong JNICALL Java_sc_vision_cv4android1_DetectionBasedTracker_nativeC
 
     try
     {
-
         DetectionBasedTracker::Parameters DetectorParams;
         if (faceSize > 0)
             DetectorParams.minObjectSize = faceSize;
