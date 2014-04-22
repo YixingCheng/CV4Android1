@@ -1,10 +1,10 @@
 #include <jni_part.h>
-#include <opencv2/core/core.hpp>
+//#include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/contrib/detection_based_tracker.hpp>
 #include <opencv2/features2d/features2d.hpp>
 
-#include <vector>
+//#include <vector>
 #include <string>
 #include <stdio.h>
 
@@ -50,6 +50,8 @@ JNIEXPORT jlong JNICALL Java_sc_vision_cv4android1_DetectionBasedTracker_nativeC
         DetectionBasedTracker::Parameters DetectorParams;
         if (faceSize > 0)
             DetectorParams.minObjectSize = faceSize;
+            DetectorParams.scaleFactor   = 1.1;
+            DetectorParams.minNeighbors  = 2;
         result = (jlong)new DetectionBasedTracker(stdFileName, DetectorParams);
     }
     catch(cv::Exception& e)

@@ -61,10 +61,13 @@ public class cvCameraPreview extends JavaCameraView implements PictureCallback {
         mCamera.takePicture(null, null, this);
     }
     
+    public void nullPreviewCallback(){
+    	mCamera.setPreviewCallback(null);
+     }
+    
 	@Override
 	public void onPictureTaken(byte[] data, Camera camera) {
 		// TODO Auto-generated method stub
-		Log.i(MainActivity.TAG, "Saving a bitmap to file");
         // The camera preview was automatically stopped. Start it again.
         mCamera.startPreview();
         mCamera.setPreviewCallback(this);

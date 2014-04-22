@@ -51,13 +51,11 @@
         <activity
             android:name="sc.vision.cv4android1.ResultActivity"
             android:label="@string/title_activity_result"
-            android:parentActivityName="sc.vision.cv4android1.MainActivity"
-            android:theme="@android:style/Theme.Holo" >
+            android:parentActivityName="sc.vision.cv4android1.MainActivity" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="sc.vision.cv4android1.MainActivity" />
         </activity>
-        
     </application>
 
 </manifest>

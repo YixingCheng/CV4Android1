@@ -4,6 +4,7 @@ package sc.vision.cv4android1;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.ListIterator;
@@ -23,6 +24,8 @@ import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
+import org.opencv.highgui.Highgui;
+import org.opencv.android.JavaCameraView;
 //import org.opencv.samples.facedetect.DetectionBasedTracker;
 
 import android.annotation.TargetApi;
@@ -95,10 +98,10 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
     private  Rect[]                 nativeLbpArray;
     private  Rect[]                 javaHaarArray;
     private  Rect[]                 nativeHaarArray;
-    public ArrayList<Mat>         javaLbpMats;
-    public ArrayList<Mat>         nativeLbpMats;
-    public ArrayList<Mat>         javaHaarMats;
-    public ArrayList<Mat>         nativeHaarMats;
+    private ArrayList<Mat>         javaLbpMats;
+    private ArrayList<Mat>         nativeLbpMats;
+    private ArrayList<Mat>         javaHaarMats;
+    private ArrayList<Mat>         nativeHaarMats;
     
     private File                   cascadeFile;
     private File                   haarFile;
@@ -469,6 +472,7 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 	    nativeLbpMats = new ArrayList<Mat>();
 	    javaHaarMats = new ArrayList<Mat>();
 	    nativeHaarMats = new ArrayList<Mat>();
+	    mViewMode = VIEW_MODE_RGBA;
         
 	}
 
@@ -572,18 +576,20 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
                  nativeDetector.detect(mGray, faces);
         	 
         	 nativeLbpArray = faces.toArray();
-             for (int i = 0; i < nativeLbpArray.length; i++)
+             for (int i = 0; i < nativeLbpArray.length; i++){
                  Core.rectangle(mRgba, nativeLbpArray[i].tl(), nativeLbpArray[i].br(), FACE_RECT_COLOR, 3);
-        	 
+                 nativeLbpMats.add(mRgba.submat(nativeLbpArray[i]));
+               }
         	 break;
         case NATIVE_HAAR_DETECTOR:
         	if (haarDetector != null)
                 haarDetector.detect(mGray, faces);
        	 
        	    nativeHaarArray = faces.toArray();
-            for (int i = 0; i < nativeHaarArray.length; i++)
+            for (int i = 0; i < nativeHaarArray.length; i++){
                 Core.rectangle(mRgba, nativeHaarArray[i].tl(), nativeHaarArray[i].br(), FACE_RECT_COLOR, 3);
-       	 
+                nativeHaarMats.add(mRgba.submat(nativeHaarArray[i]));
+              }
        	     break;
         case JAVA_HAAR_DETECTOR:
         	if (javaHaarDetector != null)
@@ -591,9 +597,10 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
                         new org.opencv.core.Size(absoluteFaceSize, absoluteFaceSize), new org.opencv.core.Size());
         	
         	javaHaarArray = faces.toArray();
-            for (int i = 0; i < javaHaarArray.length; i++)
+            for (int i = 0; i < javaHaarArray.length; i++){
                 Core.rectangle(mRgba, javaHaarArray[i].tl(), javaHaarArray[i].br(), FACE_RECT_COLOR, 3);
-            
+                javaHaarMats.add(mRgba.submat(javaHaarArray[i]));
+              }
             break;
        	 
        }
@@ -657,9 +664,12 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 				 
 				 haarDetector.stop();                      //stop the two detectors
 				 nativeDetector.stop();
+				 cvPreviewInst1.nullPreviewCallback();
+				 writeImages();
 				 
-				 Log.i(MainActivity.TAG, "Get Results Clicked!");
-				 Intent resultIntent = new Intent(CameraActivity.this, ResultActivity.class);   
+				 
+				 Intent resultIntent = new Intent(CameraActivity.this, ResultActivity.class);
+				 
                  startActivity(resultIntent); 
 			  }			
 		   });
@@ -667,7 +677,47 @@ public class CameraActivity extends Activity implements CvCameraViewListener2, O
 	}
   
   private void writeImages(){
-	     
+	      long fileIndex;
+	      
+	      SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+	      String currentDateandTime = sdf.format(new Date());
+	       
+	      Iterator<Mat> javaLbpIter = javaLbpMats.iterator();
+	      fileIndex = 0;
+	      while(javaLbpIter.hasNext()){
+	    	     Mat faceMat = javaLbpIter.next();
+	    	     String fileName = Environment.getExternalStorageDirectory().getPath() + "/javalbpsample/javalbp_" + currentDateandTime + ".jpg";
+	    	     Highgui.imwrite(fileName, faceMat);
+	    	     fileIndex++;
+	        }     
+	      
+	      Iterator<Mat> javaHaarIter = javaHaarMats.iterator();
+	      fileIndex = 0;
+	      while(javaHaarIter.hasNext()){
+	    	     Mat faceMat = javaHaarIter.next();
+	    	     String fileName = Environment.getExternalStorageDirectory().getPath() + "/javahaarsample/javahaar_" + currentDateandTime + ".png";
+	    	     Highgui.imwrite(fileName, faceMat);
+	    	     fileIndex++;
+	        }     
+	      
+	      Iterator<Mat> nativeHaarIter = nativeHaarMats.iterator();
+	      fileIndex = 0;
+	      while(nativeHaarIter.hasNext()){
+	    	     Mat faceMat = nativeHaarIter.next();
+	    	     String fileName = Environment.getExternalStorageDirectory().getPath() + "/nativehaarsample/nativehaar_" + currentDateandTime + ".png";
+	    	     Highgui.imwrite(fileName, faceMat);
+	    	     fileIndex++;
+	        }
+	      
+	      Iterator<Mat> nativeLbpIter = nativeLbpMats.iterator();
+	      fileIndex = 0;
+	      while(nativeLbpIter.hasNext()){
+	    	     Mat faceMat = nativeLbpIter.next();
+	    	     String fileName = Environment.getExternalStorageDirectory().getPath() + "/nativelbpsample/nativelbp_" + currentDateandTime + ".png";
+	    	     Highgui.imwrite(fileName, faceMat);
+	    	     fileIndex++;
+	        }
+	      
     }
 }
 

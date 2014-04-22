@@ -4,6 +4,7 @@ obj/local/armeabi-v7a/objs/cv4android1_native/jni_part.o: \
  /home/ethan/Workspace/adt-bundle-linux-x86_64-20131030/android-ndk-r9b/platforms/android-19/arch-arm/usr/include/sys/cdefs.h \
  /home/ethan/Workspace/adt-bundle-linux-x86_64-20131030/android-ndk-r9b/platforms/android-19/arch-arm/usr/include/sys/cdefs_elf.h \
  /home/ethan/Workspace/adt-bundle-linux-x86_64-20131030/android-ndk-r9b/platforms/android-19/arch-arm/usr/include/android/api-level.h \
+ /home/ethan/Workspace/OpenCV4Android/OpenCV-2.4.8-android-sdk/sdk/native/jni/include/opencv2/imgproc/imgproc.hpp \
  /home/ethan/Workspace/OpenCV4Android/OpenCV-2.4.8-android-sdk/sdk/native/jni/include/opencv2/core/core.hpp \
  /home/ethan/Workspace/OpenCV4Android/OpenCV-2.4.8-android-sdk/sdk/native/jni/include/opencv2/core/types_c.h \
  /home/ethan/Workspace/adt-bundle-linux-x86_64-20131030/android-ndk-r9b/platforms/android-19/arch-arm/usr/include/assert.h \
@@ -43,7 +44,6 @@ obj/local/armeabi-v7a/objs/cv4android1_native/jni_part.o: \
  /home/ethan/Workspace/OpenCV4Android/OpenCV-2.4.8-android-sdk/sdk/native/jni/include/opencv2/core/operations.hpp \
  /home/ethan/Workspace/adt-bundle-linux-x86_64-20131030/android-ndk-r9b/sources/cxx-stl/gnu-libstdc++/4.6/include/limits \
  /home/ethan/Workspace/OpenCV4Android/OpenCV-2.4.8-android-sdk/sdk/native/jni/include/opencv2/core/mat.hpp \
- /home/ethan/Workspace/OpenCV4Android/OpenCV-2.4.8-android-sdk/sdk/native/jni/include/opencv2/imgproc/imgproc.hpp \
  /home/ethan/Workspace/OpenCV4Android/OpenCV-2.4.8-android-sdk/sdk/native/jni/include/opencv2/imgproc/types_c.h \
  /home/ethan/Workspace/OpenCV4Android/OpenCV-2.4.8-android-sdk/sdk/native/jni/include/opencv2/core/core_c.h \
  /home/ethan/Workspace/OpenCV4Android/OpenCV-2.4.8-android-sdk/sdk/native/jni/include/opencv2/contrib/detection_based_tracker.hpp \
@@ -64,6 +64,8 @@ jni/jni_part.h:
 /home/ethan/Workspace/adt-bundle-linux-x86_64-20131030/android-ndk-r9b/platforms/android-19/arch-arm/usr/include/sys/cdefs_elf.h:
 
 /home/ethan/Workspace/adt-bundle-linux-x86_64-20131030/android-ndk-r9b/platforms/android-19/arch-arm/usr/include/android/api-level.h:
+
+/home/ethan/Workspace/OpenCV4Android/OpenCV-2.4.8-android-sdk/sdk/native/jni/include/opencv2/imgproc/imgproc.hpp:
 
 /home/ethan/Workspace/OpenCV4Android/OpenCV-2.4.8-android-sdk/sdk/native/jni/include/opencv2/core/core.hpp:
 
@@ -142,8 +144,6 @@ jni/jni_part.h:
 /home/ethan/Workspace/adt-bundle-linux-x86_64-20131030/android-ndk-r9b/sources/cxx-stl/gnu-libstdc++/4.6/include/limits:
 
 /home/ethan/Workspace/OpenCV4Android/OpenCV-2.4.8-android-sdk/sdk/native/jni/include/opencv2/core/mat.hpp:
-
-/home/ethan/Workspace/OpenCV4Android/OpenCV-2.4.8-android-sdk/sdk/native/jni/include/opencv2/imgproc/imgproc.hpp:
 
 /home/ethan/Workspace/OpenCV4Android/OpenCV-2.4.8-android-sdk/sdk/native/jni/include/opencv2/imgproc/types_c.h:
 
